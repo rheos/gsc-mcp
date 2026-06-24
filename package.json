@@ -1,0 +1,14 @@
+{
+  "name": "gsc-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only Google Search Console MCP server — Streamable-HTTP transport for mcp.example.com/gsc",
+  "main": "server-http.mjs",
+  "scripts": {
+    "start": "node server-http.mjs"
+  },
+  "dependencies": {
+    "googleapis": "^173.0.0"
+  }
+}

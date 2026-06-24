@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.local
+*.log
+# Never commit credentials — the OAuth token lives out-of-repo on the box.
+*token*.json
+.secrets/

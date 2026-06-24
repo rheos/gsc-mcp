@@ -1,0 +1,15 @@
+[Unit]
+Description=GSC MCP (read-only Google Search Console MCP, Streamable-HTTP)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/gsc-mcp
+EnvironmentFile=/opt/gsc-mcp/.env
+ExecStart=/usr/bin/node /opt/gsc-mcp/server-http.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

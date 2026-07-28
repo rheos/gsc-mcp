@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 // gsc MCP — Streamable-HTTP (JSON-RPC 2.0) transport.
-// Mirrors the M.O.T. /api/mcp handler: single POST endpoint, all messages are
-// JSON-RPC 2.0, responses are always application/json (no SSE — tools are short
-// async calls and are awaited). Auth: api key from ?api_key= or Authorization: Bearer,
-// timing-safe compared to GSC_MCP_API_KEY. Reached in prod via Apache ProxyPass
-// mcp.example.com/gsc -> 127.0.0.1:PORT/mcp.
+// Single POST endpoint, JSON-RPC 2.0, application/json responses.
+// Auth: api key from ?api_key= or Authorization: Bearer, timing-safe compared
+// to GSC_MCP_API_KEY.
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,7 +13,7 @@ import { TOOLS, dispatch } from './lib/tools.mjs';
 const PORT = parseInt(process.env.PORT || '3120', 10);
 const HOST = process.env.HOST || '127.0.0.1';
 const API_KEY = process.env.GSC_MCP_API_KEY || '';
-const TOKEN_PATH = process.env.GSC_TOKEN || path.join(os.homedir(), 'Documents/exampleco/keys/oauth/gsc-token.json');
+const TOKEN_PATH = process.env.GSC_TOKEN || path.join(os.homedir(), '.config', 'gsc-mcp', 'gsc-token.json');
 const PROTOCOL_VERSION = '2024-11-05';
 
 if (!API_KEY) {
@@ -53,7 +51,7 @@ const rpcError = (res, id, code, message) => send(res, 200, { jsonrpc: '2.0', id
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-  // Unauthenticated health check (for deploy.sh / monitoring).
+  // Unauthenticated health check for local monitoring.
   if (req.method === 'GET' && url.pathname.endsWith('/health')) {
     return send(res, 200, { status: 'ok', server: 'gsc', tools: TOOLS.length });
   }

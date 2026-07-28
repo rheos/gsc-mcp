@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Read-only Google Search Console MCP server — Streamable-HTTP transport for mcp.example.com/gsc",
+  "description": "Read-only Google Search Console MCP server with Streamable HTTP JSON-RPC transport",
   "main": "server-http.mjs",
   "scripts": {
     "start": "node server-http.mjs"

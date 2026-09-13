@@ -1,0 +1,78 @@
+# This repo has no test suite, so a Dependabot bump of googleapis would
+# otherwise merge on no evidence at all. These steps are the cheapest things
+# that actually exercise the dependency: the tree installs, every module
+# parses, googleapis loads, and the server boots far enough to answer a
+# JSON-RPC tools/list.
+#
+# The token is synthetic. google.auth.fromJSON only constructs a client from
+# the authorized_user shape, it makes no network call, which is what lets the
+# server reach "ready" without real credentials.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (clean)
+        run: npm ci
+
+      - name: Syntax check every module
+        run: |
+          for f in server-http.mjs lib/*.mjs; do
+            node --check "$f"
+            echo "ok $f"
+          done
+
+      - name: Module load smoke
+        run: |
+          node -e "
+          const g = await import('./lib/gsc.mjs');
+          if (typeof g.makeClients !== 'function') { console.error('makeClients missing'); process.exit(1); }
+          const t = await import('./lib/tools.mjs');
+          if (!Array.isArray(t.TOOLS) || t.TOOLS.length === 0) { console.error('TOOLS empty'); process.exit(1); }
+          console.log('googleapis loads, TOOLS has ' + t.TOOLS.length + ' entries');
+          "
+
+      - name: Boot and answer tools/list
+        run: |
+          set -eu
+          tok="$(mktemp)"
+          cat > "$tok" <<'JSON'
+          {"type":"authorized_user","client_id":"ci.apps.googleusercontent.com","client_secret":"ci-smoke-secret","refresh_token":"ci-smoke-refresh"}
+          JSON
+          export GSC_MCP_API_KEY=ci-smoke-key
+          export GSC_TOKEN="$tok"
+          export PORT=3120
+          export HOST=127.0.0.1
+          node server-http.mjs &
+          srv=$!
+          trap 'kill $srv 2>/dev/null || true; rm -f "$tok"' EXIT
+          ok=0
+          for _ in $(seq 1 30); do
+            body="$(curl -sf "http://127.0.0.1:$PORT/?api_key=$GSC_MCP_API_KEY" \
+              -X POST -H 'content-type: application/json' \
+              -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' 2>/dev/null)" && { ok=1; break; }
+            sleep 1
+          done
+          [ "$ok" = 1 ] || { echo "server never answered"; exit 1; }
+          echo "$body" | grep -q '"tools"' || { echo "no tools in response"; exit 1; }
+          echo "ok: boots and answers tools/list"

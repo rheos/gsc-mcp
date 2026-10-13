@@ -9,6 +9,6 @@
     "start": "node server-http.mjs"
   },
   "dependencies": {
-    "googleapis": "^182.0.0"
+    "googleapis": "^185.0.0"
   }
 }
